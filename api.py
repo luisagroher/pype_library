@@ -9,6 +9,14 @@ from repo import UserRepo, BookRepo, CheckoutRepo
 
 from faker import Faker
 
+book_fields = {
+    'book_url': fields.Url('book_endpoint'),
+    'Id': fields.String,
+    'Name': fields.String,
+    'Genre': fields.String
+    
+}
+
 checkout_fields = {
     'checkout_uri': fields.Url('checkout_endpoint'),
     'user_url': fields.Url('user_endpoint'),
@@ -35,10 +43,28 @@ class UserList(Resource):
         self.user_exists(UserId)
         return checkout_repo.get_user_checkout(UserId)
 
+
 class BookList(Resource):
-    @marshal_with(checkout_fields)
+    @marshal_with(book_fields)
     def get(self):
         return checkout_repo.get_books_due()
+
+class Book(Resource):
+    def book_exists(self, Id):
+        if Id not in book_repo.books:
+            abort(
+                status.HTTP_404_NOT_FOUND,
+                message="Book with ID {} doesn't exist.".format(Id))
+
+    @marshal_with(book_fields)
+    def get(self, Id):
+        return book_repo.get_book(Id)
+
+    def delete(self, Id):
+        self.book_exists(Id)
+        book_repo.delete_book(Id)
+        return '', status.HTTP_204_NO_CONTENT
+
 
 class Checkout(Resource):
     def abort_if_checkout_doesnt_exist(self, book_id, user_id):
@@ -46,7 +72,7 @@ class Checkout(Resource):
             abort(
                 status.HTTP_404_NOT_FOUND,
                 message="Checkout {} doesn't exist.".format(book_id))
-    
+   
     @marshal_with(checkout_fields)
     def get(self, BookId, UserId):
         self.abort_if_checkout_doesnt_exist(BookId, UserId)
@@ -151,6 +177,7 @@ api.add_resource(CheckoutList, '/api/checkouts/')
 api.add_resource(Checkout, '/api/checkouts/<string:BookId>/<string:UserId>', endpoint='checkout_endpoint')
 api.add_resource(UserList, '/api/users/<string:UserId>', endpoint='user_endpoint')
 api.add_resource(BookList, '/api/books/due/')
+api.add_resource(Book, '/api/books/<string:Id>', endpoint="book_endpoint")
 @app.before_first_request
 def setup():
     fake_users()
