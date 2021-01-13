@@ -9,6 +9,8 @@ from repo import UserRepo, BookRepo, CheckoutRepo
 
 from faker import Faker
 
+## the book fields dictionary controls the data that will be rendered in the
+## flask_restful response when a book instance is returned
 book_fields = {
     'book_url': fields.Url('book_endpoint'),
     'Id': fields.String,
@@ -16,7 +18,8 @@ book_fields = {
     'Genre': fields.String
     
 }
-
+## the checkout fields dictionary controls the data that will be rendered
+## in the flask_restful response when a checkout instance is returned
 checkout_fields = {
     'checkout_uri': fields.Url('checkout_endpoint'),
     'user_url': fields.Url('user_endpoint'),
@@ -31,7 +34,14 @@ user_repo = UserRepo()
 book_repo = BookRepo()
 checkout_repo = CheckoutRepo()
 
-class UserList(Resource):
+## 
+class User(Resource):
+
+    """uses the flask__restulf Resource subclass with a get method to return a 
+    list of books that a user has checked out when an http method with the same name
+    arrives.
+    """
+    
     def user_exists(self, user_id):
         if user_id not in user_repo.users:
             abort(
@@ -50,6 +60,10 @@ class BookList(Resource):
         return checkout_repo.get_books_due()
 
 class Book(Resource):
+    """uses the flask__restful Resource subclass with a get and delete method
+    to delete a book using http.
+    """
+
     def book_exists(self, Id):
         if Id not in book_repo.books:
             abort(
@@ -67,6 +81,10 @@ class Book(Resource):
 
 
 class Checkout(Resource):
+    """
+    A checkout resource with methods for the user to get and delete
+    a checkout with a http method
+    """
     def abort_if_checkout_doesnt_exist(self, book_id, user_id):
         if (book_id, user_id) not in checkout_repo.checkouts:
             abort(
@@ -83,12 +101,18 @@ class Checkout(Resource):
         checkout_repo.delete_checkout((BookId, UserId))
         return '', status.HTTP_204_NO_CONTENT
 
+
 class CheckoutList(Resource):
+    """
+    A checkout resource with methods for the user to get a list of checkouts
+    with an http call and a put method for a user to checkout a book with a http call
+    """
     def user_is_valid(self, user_id):
         if user_id not in user_repo.users:
             abort(
                 status.HTTP_404_NOT_FOUND,
                 message="User with ID {} doesn't exist.".format(user_id))
+    
     def book_is_valid(self, book_id):
         if book_id not in book_repo.books:
             abort(
@@ -175,11 +199,13 @@ app = Flask(__name__)
 api = Api(app)
 api.add_resource(CheckoutList, '/api/checkouts/')
 api.add_resource(Checkout, '/api/checkouts/<string:BookId>/<string:UserId>', endpoint='checkout_endpoint')
-api.add_resource(UserList, '/api/users/<string:UserId>', endpoint='user_endpoint')
+api.add_resource(User, '/api/users/<string:UserId>', endpoint='user_endpoint')
 api.add_resource(BookList, '/api/books/due/')
 api.add_resource(Book, '/api/books/<string:Id>', endpoint="book_endpoint")
+
 @app.before_first_request
 def setup():
+    """sets up fake data"""
     fake_users()
     fake_books()
 
@@ -187,14 +213,20 @@ def setup():
 ## Remove these
 @app.route('/')
 def index():
+    """index page 
+    """
     return 'A library management tool'
 
 @app.route('/users_test/')
 def get_user_list():
+    """ returns a list of users
+    """
     return user_repo.list_users()
 
 @app.route('/book_list/')
 def get_book_list():
+    """ returns a list of books
+    """
     return book_repo.list_books()
 
 
