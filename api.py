@@ -15,11 +15,11 @@ book_fields = {
     'book_url': fields.Url('book_endpoint'),
     'Id': fields.String,
     'Name': fields.String,
-    'Genre': fields.String
-    
-}
+    'Genre': fields.String 
+    }
 ## the checkout fields dictionary controls the data that will be rendered
 ## in the flask_restful response when a checkout instance is returned
+
 checkout_fields = {
     'checkout_uri': fields.Url('checkout_endpoint'),
     'user_url': fields.Url('user_endpoint'),
@@ -27,7 +27,7 @@ checkout_fields = {
     'UserId': fields.String,
     'Date': fields.DateTime,
     'DueDate': fields.DateTime
-}
+    }
 
 
 user_repo = UserRepo()
@@ -135,6 +135,9 @@ class CheckoutList(Resource):
 
 
     def checkout_is_valid(self, user_id, book_id):
+        """checks that the user and book are valid, checks that the user has not reached the library limit,
+        checks that the book is available.
+        """
         self.user_is_valid(user_id)
         self.book_is_valid(book_id)
         self.user_limit_reached(user_id)
@@ -142,10 +145,14 @@ class CheckoutList(Resource):
 
     @marshal_with(checkout_fields)
     def get(self):
+        """gets a list of checked out books via http
+        """
         return [c for c in checkout_repo.checkouts.values()]
 
     @marshal_with(checkout_fields)
     def post(self):
+        """a method to allow a user to checkout a book via http
+        """
         parser = reqparse.RequestParser()
         parser.add_argument('book_id')
         parser.add_argument('user_id')
@@ -162,73 +169,62 @@ class CheckoutList(Resource):
         return checkout, status.HTTP_201_CREATED
 
 
-def fake_users():
-    fake = Faker()
-    u = UserModel("a0f18fd8-5044-4182-8d28-905cc28aea2a", "Kimberly Miller", 3)
+
+
+
+## users Faker class to create data
+fake = Faker()
+
+def add_fake_user(user_id, name, limit=3):
+    """ creates a fake user and adds it to the user repository"""
+    u = UserModel(user_id, name, limit)
     user_repo.add_user(u)
-    u = UserModel("a34e41e0-8796-4092-b64f-c2d8a5c97bd0", "Melissa Edwards", 3)
-    user_repo.add_user(u)
+
+def add_fake_book(book_id, name, checkout_length):
+    """adds a fake book to the book repository"""
+    b = BookModel(book_id, name, checkout_length)
+    book_repo.add_book(b)
+
+def add_batch_users():
+    """adds a batch of users to the user repository"""
+    add_fake_user("a0f18fd8-5044-4182-8d28-905cc28aea2a", "Kimberly Miller")
+    add_fake_user("a34e41e0-8796-4092-b64f-c2d8a5c97bd0", "Melissa Edwards", limit=0)
     for i in range(10):
-        user_id = fake.uuid4()
-        name = fake.name()
-        limit=3
-        user = UserModel(user_id, name, limit)
-        user_repo.add_user(user)
-    return jsonify(users=[u.serialize() for u in user_repo.users.values()])
+        add_fake_user(fake.uuid4(), fake.name())
 
-def fake_books():
-    fake = Faker()
-    b = BookModel("6da03573-5bee-40bc-b43e-84ebe66b0b76", "Emma", "Romance")
-    book_repo.add_book(b)
-    b = BookModel("5fb5afbd-cf05-4b2c-b369-94dac223279e", "Great Gatsby", "Lit")
-    book_repo.add_book(b)
-    b = BookModel("2aff469c-6f2f-45cc-ba64-5569e5557015", "Chalk", "Juvenile")
-    book_repo.add_book(b)
-    b = BookModel("9e79a592-c5bd-4acd-aa16-6a0579a14adc", "The 100", "Sci Fi")
-    book_repo.add_book(b)
-
+def add_batch_books():
+    """adds a batch of books to the book factory"""
+    add_fake_book("6da03573-5bee-40bc-b43e-84ebe66b0b76", "Emma", "Romance")
+    add_fake_book("5fb5afbd-cf05-4b2c-b369-94dac223279e", "Great Gatsby", "Lit")
+    add_fake_book("2aff469c-6f2f-45cc-ba64-5569e5557015", "Chalk", "Juvenile")
+    add_fake_book("9e79a592-c5bd-4acd-aa16-6a0579a14adc", "The 100", "Sci Fi")
     for i in range(10):
-        book_id = fake.uuid4()
-        name = fake.sentence()
-        genre =fake.word()
-        book = BookModel(book_id, name, genre)
-        book_repo.add_book(book)
-    return jsonify(books=[b.serialize() for b in book_repo.books.values()])
+        add_fake_book(fake.uuid4(), fake.sentence(), fake.word())
 
-app = Flask(__name__)
-api = Api(app)
-api.add_resource(CheckoutList, '/api/checkouts/')
-api.add_resource(Checkout, '/api/checkouts/<string:BookId>/<string:UserId>', endpoint='checkout_endpoint')
-api.add_resource(User, '/api/users/<string:UserId>', endpoint='user_endpoint')
-api.add_resource(BookList, '/api/books/due/')
-api.add_resource(Book, '/api/books/<string:Id>', endpoint="book_endpoint")
+## A function that initializes the flask application
+def create_app():
+    app = Flask(__name__)
+    api = Api(app)
+    api.add_resource(CheckoutList, '/api/checkouts/')
+    api.add_resource(Checkout, '/api/checkouts/<string:BookId>/<string:UserId>', endpoint='checkout_endpoint')
+    api.add_resource(User, '/api/users/<string:UserId>', endpoint='user_endpoint')
+    api.add_resource(BookList, '/api/books/due/')
+    api.add_resource(Book, '/api/books/<string:Id>', endpoint="book_endpoint")
+    return app
+
+app = create_app()
 
 @app.before_first_request
 def setup():
-    """sets up fake data"""
-    fake_users()
-    fake_books()
-
+    """sets up and populates fake data to the user and book repos"""
+    add_batch_users()
+    add_batch_books()
 
 ## Remove these
 @app.route('/')
 def index():
     """index page 
     """
-    return 'A library management tool'
-
-@app.route('/users_test/')
-def get_user_list():
-    """ returns a list of users
-    """
-    return user_repo.list_users()
-
-@app.route('/book_list/')
-def get_book_list():
-    """ returns a list of books
-    """
-    return book_repo.list_books()
-
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')

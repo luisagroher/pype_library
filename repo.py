@@ -91,4 +91,3 @@ class CheckoutRepo():
 
     def get_books_due(self):
         return [c for c in self.checkouts.values() if c.DueDate < datetime.today() + timedelta(days=3) ]
-

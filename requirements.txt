@@ -4,7 +4,5 @@ flask-restful
 # Testing
 Faker
 pytest
-tox
-coverage
-pytest-cov
 pytest-flask
+
