@@ -1,42 +1,47 @@
-import hashlib
-from datetime import datetime, timedelta
+import os
+from datetime import datetime
 
-class UserModel:
-    """a class to represent users with a constructor that initializes 
-    the user id, name, and limit attributes. The default checkout limit is 3"""
-    def __init__(self, user_id, name, limit=3):
-        self.Id = user_id
-        self.Name = name
-        self.BookLimit = limit
+from pynamodb.models import Model
+from pynamodb.attributes import UnicodeAttribute, UTCDateTimeAttribute, NumberAttribute
 
-    def serialize(self):
-        return {
-        'Id': self.Id,
-        'Name': self.Name,
-        'BookLimit': self.BookLimit
-        }
+dynamodb_host = os.getenv("DYNAMODB_HOST")
+
+def create_tables_if_not_exist():
+    if not UserModel.exists():
+        UserModel.create_table(read_capacity_units=5, write_capacity_units=2, wait=True)
 
 
-class BookModel:
-    """a class to represent books with a constructor that initializes
-    the book id, book name, and genre attributes"""
-    def __init__(self, book_id, name, genre):
-        self.Id = book_id
-        self.Name = name
-        self.Genre = genre
+class UserModel(Model):
+    """
+    DynamoDB User Table
+    """
+    class Meta:
+        table_name = "users"
+        host = dynamodb_host
 
-    def serialize(self):
-        return {
-        'Id': self.Id,
-        'Name': self.Name,
-        'Genre': self.Genre
-        }
+    UserId = UnicodeAttribute(hash_key=True)
+    Name = UnicodeAttribute()
+    BookLimit = NumberAttribute(default=10)
 
-class CheckoutsModel:
-    """a class to represent checkout with a constructor that initializes the
-    book id, book name, checkout date and due date attributes"""
-    def __init__(self, user_id, book_id, checkout_date=datetime.today(), due=14):
-        self.BookId = book_id
-        self.UserId = user_id
-        self.Date = checkout_date
-        self.DueDate = self.Date + timedelta(days=due)
+    def to_dict(self):
+        return self.__dict__['attribute_values']
+
+class BookModel(Model):
+    """
+    DynamoDB Book Table
+    """
+    class Meta:
+        table_name = 'books'
+
+    BookId = UnicodeAttribute()
+    Name = UnicodeAttribute()
+    Genre = UnicodeAttribute()
+
+class CheckoutsModel(Model):
+    """
+    DynamoDB Checkouts Table
+    """
+    BookId = UnicodeAttribute(hash_key=True)
+    UserId = UnicodeAttribute(hash_key=True)
+    Date = UTCDateTimeAttribute()
+    DueDate = UTCDateTimeAttribute()
