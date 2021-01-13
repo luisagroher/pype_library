@@ -1,0 +1,10 @@
+Flask==1.1.1
+flask-restful
+
+# Testing
+Faker
+pytest
+tox
+coverage
+pytest-cov
+pytest-flask
