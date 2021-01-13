@@ -187,7 +187,7 @@ def setup():
 ## Remove these
 @app.route('/')
 def index():
-    return 'Hey, we have Flask in a Docker container!'
+    return 'A library management tool'
 
 @app.route('/users_test/')
 def get_user_list():
